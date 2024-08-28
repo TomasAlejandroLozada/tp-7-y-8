@@ -1,0 +1,210 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <iomanip>
+
+class Bebida {
+protected:
+    int id;
+    double litros;
+    double precio;
+    std::string marca;
+
+public:
+    Bebida(int id, double litros, double precio, std::string marca)
+        : id(id), litros(litros), precio(precio), marca(marca) {}
+
+    virtual ~Bebida() {}
+
+    int getId() const { return id; }
+    double getLitros() const { return litros; }
+    double getPrecio() const { return precio; }
+    std::string getMarca() const { return marca; }
+
+    void setLitros(double litros) { this->litros = litros; }
+    void setPrecio(double precio) { this->precio = precio; }
+    void setMarca(const std::string &marca) { this->marca = marca; }
+
+    virtual double calcularPrecio() const {
+        return precio * litros;
+    }
+
+    virtual std::string toString() const {
+        return "ID: " + std::to_string(id) +
+               ", Litros: " + std::to_string(litros) +
+               ", Precio: " + std::to_string(precio) +
+               ", Marca: " + marca;
+    }
+};
+
+class AguaMineral : public Bebida {
+private:
+    std::string origen;
+
+public:
+    AguaMineral(int id, double litros, double precio, std::string marca, std::string origen)
+        : Bebida(id, litros, precio, marca), origen(origen) {}
+
+    std::string getOrigen() const { return origen; }
+    void setOrigen(const std::string &origen) { this->origen = origen; }
+
+    std::string toString() const override {
+        return Bebida::toString() + ", Origen: " + origen;
+    }
+};
+
+class BebidaAzucarada : public Bebida {
+private:
+    double porcentajeAzucar;
+    bool tienePromocion;
+
+public:
+    BebidaAzucarada(int id, double litros, double precio, std::string marca, double porcentajeAzucar, bool tienePromocion)
+        : Bebida(id, litros, precio, marca), porcentajeAzucar(porcentajeAzucar), tienePromocion(tienePromocion) {}
+
+    double getPorcentajeAzucar() const { return porcentajeAzucar; }
+    bool getTienePromocion() const { return tienePromocion; }
+    void setPorcentajeAzucar(double porcentajeAzucar) { this->porcentajeAzucar = porcentajeAzucar; }
+    void setTienePromocion(bool tienePromocion) { this->tienePromocion = tienePromocion; }
+
+    double calcularPrecio() const override {
+        double precioFinal = Bebida::calcularPrecio();
+        if (tienePromocion) {
+            precioFinal *= 0.9; // 10% descuento
+        }
+        return precioFinal;
+    }
+
+    std::string toString() const override {
+        return Bebida::toString() +
+               ", % Azúcar: " + std::to_string(porcentajeAzucar) +
+               ", Promoción: " + (tienePromocion ? "Sí" : "No");
+    }
+};
+
+class Almacen {
+private:
+    std::vector<std::vector<Bebida*>> estanterias;
+    int numEstanterias;
+    int maxProductosPorEstanteria;
+
+public:
+    Almacen(int numEstanterias, int maxProductosPorEstanteria)
+        : numEstanterias(numEstanterias), maxProductosPorEstanteria(maxProductosPorEstanteria) {
+        estanterias.resize(numEstanterias, std::vector<Bebida*>(maxProductosPorEstanteria, nullptr));
+    }
+
+    ~Almacen() {
+        for (auto& estanteria : estanterias) {
+            for (auto& bebida : estanteria) {
+                delete bebida;
+            }
+        }
+    }
+
+    bool agregarProducto(Bebida* bebida) {
+        for (auto& estanteria : estanterias) {
+            for (auto& b : estanteria) {
+                if (b != nullptr && b->getId() == bebida->getId()) {
+                    delete bebida; // ID repetido, no agregar
+                    return false;
+                }
+            }
+        }
+
+        for (int i = 0; i < numEstanterias; ++i) {
+            for (int j = 0; j < maxProductosPorEstanteria; ++j) {
+                if (estanterias[i][j] == nullptr) {
+                    estanterias[i][j] = bebida;
+                    return true;
+                }
+            }
+        }
+        delete bebida; // Almacén lleno
+        return false;
+    }
+
+    bool eliminarProducto(int id) {
+        for (auto& estanteria : estanterias) {
+            for (auto& bebida : estanteria) {
+                if (bebida != nullptr && bebida->getId() == id) {
+                    delete bebida;
+                    bebida = nullptr;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    double calcularPrecioTotal() const {
+        double total = 0;
+        for (const auto& estanteria : estanterias) {
+            for (const auto& bebida : estanteria) {
+                if (bebida != nullptr) {
+                    total += bebida->calcularPrecio();
+                }
+            }
+        }
+        return total;
+    }
+
+    double calcularPrecioMarca(const std::string& marca) const {
+        double total = 0;
+        for (const auto& estanteria : estanterias) {
+            for (const auto& bebida : estanteria) {
+                if (bebida != nullptr && bebida->getMarca() == marca) {
+                    total += bebida->calcularPrecio();
+                }
+            }
+        }
+        return total;
+    }
+
+    double calcularPrecioEstanteria(int estanteriaIndex) const {
+        if (estanteriaIndex < 0 || estanteriaIndex >= numEstanterias) {
+            std::cerr << "Índice de estantería fuera de rango." << std::endl;
+            return 0;
+        }
+        double total = 0;
+        for (const auto& bebida : estanterias[estanteriaIndex]) {
+            if (bebida != nullptr) {
+                total += bebida->calcularPrecio();
+            }
+        }
+        return total;
+    }
+
+    void mostrarInformacion() const {
+        for (int i = 0; i < numEstanterias; ++i) {
+            std::cout << "Estantería " << i << ":" << std::endl;
+            for (const auto& bebida : estanterias[i]) {
+                if (bebida != nullptr) {
+                    std::cout << bebida->toString() << std::endl;
+                }
+            }
+        }
+    }
+};
+
+int main() {
+    Almacen almacen(3, 5);
+
+    almacen.agregarProducto(new AguaMineral(1, 1.5, 0.8, "Aqua", "Manantial X"));
+    almacen.agregarProducto(new BebidaAzucarada(2, 1.0, 1.2, "Coca-Cola", 10.0, true));
+    almacen.agregarProducto(new BebidaAzucarada(3, 0.5, 1.0, "Fanta", 12.0, false));
+    almacen.agregarProducto(new AguaMineral(4, 2.0, 1.5, "Evian", "Manantial Y"));
+
+    std::cout << "Precio total del almacén: " << almacen.calcularPrecioTotal() << std::endl;
+    std::cout << "Precio total de Coca-Cola: " << almacen.calcularPrecioMarca("Coca-Cola") << std::endl;
+    std::cout << "Precio total de la estantería 0: " << almacen.calcularPrecioEstanteria(0) << std::endl;
+
+    almacen.mostrarInformacion();
+
+    almacen.eliminarProducto(2);
+
+    std::cout << "Información después de eliminar el producto con ID 2:" << std::endl;
+    almacen.mostrarInformacion();
+
+    return 0;
+}
