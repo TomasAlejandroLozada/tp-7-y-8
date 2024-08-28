@@ -1,0 +1,101 @@
+#include <iostream>
+#include <string>
+#include <vector>
+
+class Producto {
+protected:
+    std::string nombre;
+    double precio;
+
+public:
+    Producto(std::string nombre, double precio) : nombre(nombre), precio(precio) {}
+
+    virtual ~Producto() {}
+
+    virtual double calcular(int cantidad) const {
+        return precio * cantidad;
+    }
+
+    std::string getNombre() const { return nombre; }
+    double getPrecio() const { return precio; }
+    void setNombre(const std::string &nombre) { this->nombre = nombre; }
+    void setPrecio(double precio) { this->precio = precio; }
+
+    virtual std::string toString() const {
+        return "Nombre: " + nombre + ", Precio: " + std::to_string(precio);
+    }
+};
+
+class Perecedero : public Producto {
+private:
+    int diasACaducar;
+
+public:
+    Perecedero(std::string nombre, double precio, int diasACaducar)
+        : Producto(nombre, precio), diasACaducar(diasACaducar) {}
+
+    double calcular(int cantidad) const override {
+        double precioFinal = Producto::calcular(cantidad);
+        if (diasACaducar == 1) {
+            precioFinal -= precioFinal * 4;
+        } else if (diasACaducar == 2) {
+            precioFinal -= precioFinal * 3;
+        } else if (diasACaducar == 3) {
+            precioFinal /= 2;
+        }
+        return precioFinal;
+    }
+
+    int getDiasACaducar() const { return diasACaducar; }
+    void setDiasACaducar(int diasACaducar) { this->diasACaducar = diasACaducar; }
+
+    std::string toString() const override {
+        return Producto::toString() + ", Días a Caducar: " + std::to_string(diasACaducar);
+    }
+};
+
+class NoPerecedero : public Producto {
+private:
+    std::string tipo;
+
+public:
+    NoPerecedero(std::string nombre, double precio, std::string tipo)
+        : Producto(nombre, precio), tipo(tipo) {}
+
+    double calcular(int cantidad) const override {
+        return Producto::calcular(cantidad);
+    }
+
+    std::string getTipo() const { return tipo; }
+    void setTipo(const std::string &tipo) { this->tipo = tipo; }
+
+    std::string toString() const override {
+        return Producto::toString() + ", Tipo: " + tipo;
+    }
+};
+
+int main() {
+    std::vector<Producto*> productos;
+    productos.push_back(new Perecedero("Leche", 1.0, 1));
+    productos.push_back(new Perecedero("Pan", 0.5, 2));
+    productos.push_back(new NoPerecedero("Arroz", 2.0, "Grano"));
+    productos.push_back(new NoPerecedero("Aceite", 3.0, "Líquido"));
+
+    int cantidad = 5;
+    double totalPrecio = 0;
+
+    for (const auto& producto : productos) {
+        double precioTotal = producto->calcular(cantidad);
+        std::cout << producto->toString() << ", Precio Total (para " << cantidad << " unidades): " << precioTotal << std::endl;
+        totalPrecio += precioTotal;
+    }
+
+    std::cout << "Precio Total de Todos los Productos: " << totalPrecio << std::endl;
+
+    
+    for (auto& producto : productos) {
+        delete producto;
+    }
+
+    return 0;
+}
